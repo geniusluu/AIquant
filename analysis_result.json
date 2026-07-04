@@ -1,0 +1,28 @@
+{
+  "correlation_pct": 0.8613,
+  "correlation_price": 0.8726,
+  "avg_premium": 24.26,
+  "max_premium": 68.53,
+  "min_premium": 0.04,
+  "max_premium_date": "20260625",
+  "min_premium_date": "20250811",
+  "latest_premium": 57.19,
+  "a_period_change": 81.22,
+  "h_period_change": 39.45,
+  "a_high": {
+    "date": "20260506",
+    "price": 82.49
+  },
+  "a_low": {
+    "date": "20250707",
+    "price": 32.08
+  },
+  "h_high": {
+    "date": "20260504",
+    "price": 69.15
+  },
+  "h_low": {
+    "date": "20250707",
+    "price": 28.35
+  }
+}
