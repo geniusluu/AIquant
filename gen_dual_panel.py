@@ -163,6 +163,51 @@ html_template = """<!DOCTYPE html>
   .legend-note { font-size: 12px; color: #999; margin-top: 8px; display: flex; gap: 20px; flex-wrap: wrap; }
   .legend-note span { display: flex; align-items: center; gap: 6px; }
   .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .company-intro {
+    background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 32px; margin-bottom: 24px;
+  }
+  .company-intro h2 {
+    font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a2e;
+    border-left: 4px solid #2BA84A; padding-left: 12px;
+  }
+  .company-intro p {
+    font-size: 14px; line-height: 1.9; color: #555; margin-bottom: 12px; text-align: justify;
+  }
+  .company-intro .highlight {
+    background: #e8f5e9; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #2e7d32;
+  }
+  .chart-insight {
+    background: #f8f9fc; border-left: 3px solid #1a73e8; border-radius: 0 8px 8px 0;
+    padding: 16px 20px; margin-top: 16px; font-size: 13px; line-height: 1.8; color: #444;
+  }
+  .chart-insight strong { color: #1a73e8; }
+  .chart-card.a-card .chart-insight { border-left-color: #E23A3A; }
+  .chart-card.a-card .chart-insight strong { color: #E23A3A; }
+  .chart-card.h-card .chart-insight { border-left-color: #1a73e8; }
+  .chart-card.h-card .chart-insight strong { color: #1a73e8; }
+  .chart-card.prem-card .chart-insight { border-left-color: #FF9800; }
+  .chart-card.prem-card .chart-insight strong { color: #FF9800; }
+  .chart-card.corr-card .chart-insight { border-left-color: #7B61FF; }
+  .chart-card.corr-card .chart-insight strong { color: #7B61FF; }
+  .summary-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff; border-radius: 12px; padding: 36px; margin-bottom: 24px;
+  }
+  .summary-section h2 {
+    font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #ffd43b;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .summary-section h2::before {
+    content: ''; width: 4px; height: 24px; background: #ffd43b; border-radius: 2px; display: inline-block;
+  }
+  .summary-section p {
+    font-size: 15px; line-height: 2; color: #c8d0e0; margin-bottom: 16px; text-align: justify;
+  }
+  .summary-section .key-point {
+    background: rgba(255,212,59,0.1); padding: 2px 8px; border-radius: 4px;
+    font-weight: 600; color: #ffd43b;
+  }
 </style>
 </head>
 <body>
@@ -195,6 +240,12 @@ html_template = """<!DOCTYPE html>
 </div>
 
 <div class="container">
+  <div class="company-intro">
+    <h2>公司简介 · 天齐锂业 (002466.SZ / 09696.HK)</h2>
+    <p>天齐锂业是中国领先的锂新能源材料企业，主营业务涵盖<strong>硬岩型锂矿资源开发、锂精矿生产销售以及锂化工产品（碳酸锂、氢氧化锂等）的生产销售</strong>。公司控股全球最大、成本最低的硬岩锂矿——澳大利亚格林布什（Greenbushes）锂辉石矿（年产能214万吨锂精矿），同时参股智利SQM（全球最大盐湖锂资源商之一），形成了"矿石+盐湖"双轮驱动的资源布局，锂资源自给率行业领先。</p>
+    <p>财务方面，2025年公司实现营业收入<span class="highlight">103.46亿元</span>（同比-20.8%），归母净利润<span class="highlight">4.63亿元</span>，成功扭亏为盈（2024年亏损79.05亿元）。2026年一季度业绩预告净利润<span class="highlight">17-20亿元</span>，同比增长<span class="highlight">1530%-1818%</span>，主要受益于锂价大幅上行与低成本矿产能释放。公司判断2026年全球锂行业供需将处于<span class="highlight">紧平衡</span>状态，上半年锂矿供应持续偏紧，新能源汽车与储能需求为核心增长引擎，中长期成长空间广阔。</p>
+  </div>
+
   <div class="chart-card a-card">
     <h2>A股 002466.SZ · K线走势 & 成交量</h2>
     <div class="chart-desc">深交所 · 人民币计价 · 近一年 __N_A__ 个交易日</div>
@@ -204,6 +255,9 @@ html_template = """<!DOCTYPE html>
       <span><i class="dot" style="background:#2BA84A"></i> 阴线</span>
       <span><i class="dot" style="background:#FFB900"></i> MA5</span>
       <span><i class="dot" style="background:#7B61FF"></i> MA20</span>
+    </div>
+    <div class="chart-insight">
+      <strong>图表解读：</strong>A股近一年走势可分为明显的五个阶段。7-8月受锂价见底预期催化，股价从¥32急涨至¥46（+44%），MA5快速上穿MA20形成金叉；随后8-9月获利回吐回调至¥42。9-11月走出一波主升浪，股价从¥42攀升至¥64（+52%），这是全年最大的趋势性上涨，对应碳酸锂期货价格反弹及三季报业绩改善预期。成交量方面，11月日均成交达100万手，为全年最活跃月份，量价齐升特征明显。11月至次年3月，股价从¥64深度回调至¥49（-23%），期间成交量逐步萎缩至日均41-43万手，市场进入缩量阴跌阶段。3月以来股价企稳反弹至¥59，MA20均线走平后再度向上，当前处于反弹趋势确认期。
     </div>
   </div>
 
@@ -217,12 +271,18 @@ html_template = """<!DOCTYPE html>
       <span><i class="dot" style="background:#FFB900"></i> MA5</span>
       <span><i class="dot" style="background:#7B61FF"></i> MA20</span>
     </div>
+    <div class="chart-insight">
+      <strong>图表解读：</strong>港股走势与A股高度同步，但波幅和绝对涨幅明显较小。港股从起始的HK$28.9涨至最新HK$40.3（+39.5%），远低于A股的+81%。几个关键差异值得关注：8月11日港股单日暴涨18.2%（A股当日+10%涨停未开），说明港股在极端行情中波动更剧烈；10月初港股一度冲至HK$50.8的阶段高点，彼时A股尚未创新高，港股领先约一周见顶。5月初港股触及全年最高HK$69.2，随后回调幅度（-42%）也大于A股同期回调（-28%），体现出港股对外资流动性更敏感、涨跌更高效的特征。成交量整体小于A股，但在关键转折点往往先于A股放量。
+    </div>
   </div>
 
   <div class="chart-card prem-card">
     <h2>AH溢价率走势</h2>
     <div class="chart-desc">溢价率 = (A股价格 - 港股价格*汇率) / (港股价格*汇率) * 100% · 正值表示A股贵于港股</div>
     <div id="prem-chart" class="chart" style="height:360px"></div>
+    <div class="chart-insight">
+      <strong>图表解读：</strong>AH溢价率是衡量同一家公司在两个市场估值差异的核心指标。过去一年溢价率呈现"先收窄后急扩"的V型走势：起始时溢价约40%，8月初随着港股暴涨一度收窄至接近0%（即A股与港股几乎平价），这是外资集中看好锂业板块推高港股的结果。随后溢价率一路攀升，尤其进入2026年后加速上行，6月下旬触及全年最高的68.5%，当前维持在57%的高位。溢价率持续走扩意味着A股估值显著高于港股，背后的逻辑是：A股投资者更愿意为锂业成长性支付溢价，而港股受国际资金面和做空机制约束定价更为"理性"。高溢价状态下，需关注港股补涨或A股阶段性回调带来的均值回归风险。
+    </div>
   </div>
 
   <div class="chart-card corr-card">
@@ -232,6 +292,9 @@ html_template = """<!DOCTYPE html>
     <div class="legend-note">
       <span><i class="dot" style="background:#E23A3A"></i> A股 (002466.SZ)</span>
       <span><i class="dot" style="background:#1a73e8"></i> 港股 (09696.HK)</span>
+    </div>
+    <div class="chart-insight">
+      <strong>图表解读：</strong>将两市场起始日价格标准化为100后，可以清晰地看到A股（红线）的弹性显著大于港股（蓝线）。截至最新，A股指数升至约181，港股约139，差距超过40个百分点。两线在大部分时间内同涨同跌、方向一致，但斜率不同——A股上涨时涨得更快、下跌时也跌得更深。最典型的分化出现在2025年8月初和2026年5月：前者港股率先暴涨将两条线拉至接近重合，后者A股单边拉升将差距迅速拉开。这种"A强H弱"的格局，一方面源于A股散户和游资活跃度更高，另一方面也反映了内地资金对锂板块的偏好强于国际资金。当两条线差距过大时，往往预示着短期均值回归压力。
     </div>
   </div>
 
@@ -268,6 +331,14 @@ html_template = """<!DOCTYPE html>
         </table>
       </div>
     </div>
+  </div>
+
+  <div class="summary-section">
+    <h2>总结与后市展望</h2>
+    <p><strong style="color:#fff">回顾：</strong>过去一年，天齐锂业A股和港股均录得显著涨幅（A股+81%、港股+39%），核心驱动来自锂价触底回升和公司业绩从巨亏到扭亏的拐点确认。2025年7月碳酸锂价格跌至周期底部后持续反弹，公司凭借格林布什低成本矿优势在价格底部依然盈利，2026年Q1净利润暴增15-18倍，基本面与股价形成正反馈。从市场结构看，A股弹性显著高于港股，AH溢价率从近0%扩大至57%，反映出国内资金对锂业成长性的更强偏好。</p>
+    <p><strong style="color:#fff">展望：</strong>公司管理层判断2026年全球锂行业供需将维持<span class="key-point">紧平衡</span>格局，上半年锂矿供应持续偏紧。需求端，新能源汽车渗透率仍在提升、储能装机高速增长，叠加机器人、低空经济等新兴场景，中长期成长逻辑坚实。券商一致预期2026年公司净利润可达<span class="key-point">60.7亿元</span>（同比+1212%），每股收益3.57元，对应当前A股估值仍有下行保护。</p>
+    <p><strong style="color:#fff">风险提示：</strong>需关注锂价短期波动风险（6月碳酸锂价格因淡季和库存担忧已有回调）、SQM股权处置的不确定性、以及当前AH溢价率处于历史高位可能带来的均值回归压力。从技术面看，A股经过3-7月的反弹后，MA20均线走平向上，中期趋势偏多，但短期在¥58-62区间存在获利盘压力，若放量突破则有望挑战前期高点¥82。</p>
+    <p style="font-size:12px;color:#6b7a90;border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;margin-top:8px;">以上分析基于公开市场数据，仅供学习研究参考，不构成任何投资建议。投资者应独立判断并自行承担投资风险。</p>
   </div>
 
   <div class="footer">数据来源：Tushare Pro (A股) / 东方财富 (港股) ｜ 生成时间：__A_LAST__ ｜ 仅供学习研究，不构成投资建议</div>
