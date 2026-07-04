@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票技术指标交互分析工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5; color: #333; font-size: 14px;
+  }
+  .header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px; background: #fff;
+    border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 200;
+  }
+  .header h1 { font-size: 15px; font-weight: 600; }
+  .header .ver { font-size: 12px; color: #aaa; }
+  .stock-tabs { margin-left: auto; display: flex; gap: 4px; }
+  .stock-tab {
+    font-size: 12px; padding: 5px 12px; border-radius: 6px;
+    background: transparent; border: 1px solid #ddd; color: #666;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .stock-tab:hover { background: #f5f5f5; }
+  .stock-tab.active {
+    background: #185FA5; color: #fff; border-color: #185FA5; font-weight: 500;
+  }
+  .toolbar {
+    display: flex; align-items: center; gap: 20px; flex-wrap: nowrap; overflow-x: auto;
+    padding: 10px 20px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0;
+    position: sticky; top: 42px; z-index: 199;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .param-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+  .param-group .label { font-size: 12px; font-weight: 600; }
+  .param-group .sub { font-size: 11px; color: #999; }
+  .param-group input[type="number"] {
+    width: 42px; font-size: 12px; padding: 3px 6px; text-align: center;
+    border: 1px solid #ccc; border-radius: 4px;
+  }
+  .btn-recalc {
+    font-size: 12px; padding: 5px 16px; margin-left: auto;
+    background: #185FA5; color: #fff; border: none; border-radius: 6px;
+    cursor: pointer; font-weight: 500; flex-shrink: 0; white-space: nowrap;
+  }
+  .btn-recalc:hover { background: #0C447C; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 16px 20px 60px; }
+  .chart-card {
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .chart-card-hd {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px 8px; border-bottom: 1px solid #f0f0f0;
+  }
+  .chart-card-hd .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .chart-card-hd .title { font-size: 13px; font-weight: 600; }
+  .chart-card-hd .info { margin-left: auto; font-size: 11px; color: #999; }
+  .chart-body { padding: 8px 12px; }
+  .chart-body .echart { width: 100%; height: 440px; }
+  .chart-body .echart-small { width: 100%; height: 200px; }
+
+  /* 摘要与共振 */
+  .summary-section {
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    padding: 16px 20px; margin-bottom: 16px;
+  }
+  .summary-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .summary-grid {
+    display: flex; gap: 12px; margin-bottom: 16px;
+  }
+  .summary-card {
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden;
+    background: #f8f9fa; border-radius: 8px; padding: 12px 10px;
+    border: 1px solid #e8eaf0; text-align: center;
+  }
+  .summary-card .name { font-size: 12px; color: #888; }
+  .summary-card .value { font-size: 20px; font-weight: 600; margin: 4px 0 2px;
+    overflow: hidden; text-overflow: ellipsis; }
+  .summary-card .status { font-size: 11px; color: #aaa; }
+  .resonance-bar { display: flex; gap: 10px; }
+  .resonance-item {
+    flex: 1; text-align: center; padding: 10px; border-radius: 8px; border: 1px solid;
+  }
+  .resonance-item .tag { font-size: 12px; color: #666; margin-bottom: 2px; }
+  .resonance-item .score { font-size: 22px; font-weight: 600; }
+  .resonance-item .score .total { font-size: 13px; opacity: 0.5; }
+  .verdict-box {
+    text-align: center; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd;
+    background: #fff; display: flex; flex-direction: column; justify-content: center;
+  }
+  .verdict-box .tag { font-size: 11px; color: #999; }
+  .verdict-box .text { font-size: 16px; font-weight: 600; margin-top: 2px; }
+
+  /* KDJ 原理介绍 */
+  .info-section {
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .info-hd {
+    padding: 12px 16px 8px; border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .info-hd .dot { width: 6px; height: 6px; border-radius: 50%; background: #7B1FA2; }
+  .info-hd .title { font-size: 13px; font-weight: 600; }
+  .info-bd { padding: 14px 18px; font-size: 13px; line-height: 1.8; color: #555; }
+  .info-bd h4 { font-size: 13px; font-weight: 600; color: #333; margin-top: 10px; margin-bottom: 4px; }
+  .info-bd h4:first-child { margin-top: 0; }
+  .info-bd .formula {
+    background: #f5f7fa; border-radius: 6px; padding: 8px 14px;
+    font-family: "SF Mono", "Menlo", monospace; font-size: 12px;
+    color: #333; margin: 6px 0; line-height: 1.6;
+  }
+  .info-bd .note { font-size: 12px; color: #888; margin-top: 4px; }
+  .info-bd .signal { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+  .info-bd .signal-item { font-size: 12px; }
+
+  .c-red { color: #D32F2F; } .c-green { color: #388E3C; } .c-amber { color: #F57C00; }
+  .c-blue { color: #1976D2; } .c-purple { color: #7B1FA2; } .c-teal { color: #0F6E56; }
+  .bg-red { background: #FFEBEE; border-color: #F5C4B3; }
+  .bg-green { background: #E8F5E9; border-color: #9FE1CB; }
+  .bg-amber { background: #FFF8E1; border-color: #FAC775; }
+  @media (max-width: 768px) {
+    .summary-grid { flex-wrap: wrap; }
+    .summary-card { flex: 1 1 45%; }
+    .resonance-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>股票技术指标交互分析工具</h1>
+  <span class="ver">v1.0</span>
+  <div class="stock-tabs" id="stockTabs"></div>
+</div>
+
+<div class="toolbar" id="toolbar">
+  <div class="param-group">
+    <span class="label c-blue">RSI</span>
+    <span class="sub">周期</span>
+    <input type="number" id="rsiPeriod" value="14" min="2" max="30">
+  </div>
+  <div class="param-group">
+    <span class="label c-amber">MACD</span>
+    <span class="sub">快</span>
+    <input type="number" id="macdFast" value="12" min="3" max="20">
+    <span class="sub">慢</span>
+    <input type="number" id="macdSlow" value="26" min="10" max="40">
+    <span class="sub">信号</span>
+    <input type="number" id="macdSignal" value="9" min="3" max="20">
+  </div>
+  <div class="param-group">
+    <span class="label c-teal">BOLL</span>
+    <span class="sub">周期</span>
+    <input type="number" id="bollPeriod" value="20" min="5" max="40">
+    <span class="sub">σ</span>
+    <input type="number" id="bollNbdev" value="2" min="1" max="3" step="0.5">
+  </div>
+  <div class="param-group">
+    <span class="label c-purple">KDJ</span>
+    <span class="sub">周期</span>
+    <input type="number" id="kdjPeriod" value="9" min="3" max="20">
+    <span class="sub">平滑</span>
+    <input type="number" id="kdjSmooth" value="3" min="2" max="6">
+  </div>
+  <button class="btn-recalc" onclick="recalculate()">重算指标 ↗</button>
+</div>
+
+<div class="container">
+
+  <!-- 1. 主图：K线 + 布林带 + 成交量 + dataZoom日期范围 -->
+  <div class="chart-card">
+    <div class="chart-card-hd">
+      <div class="dot" style="background:#333;"></div>
+      <span class="title" id="klineTitle">K线走势 + 布林带</span>
+      <span class="info">红涨绿跌 · MA5 / MA20 · 拖动下方滑块选择日期范围（联动全部图表）</span>
+    </div>
+    <div class="chart-body"><div class="echart" id="chartKline"></div></div>
+  </div>
+
+  <!-- 2. 指标摘要与共振评分（移到 RSI 之前） -->
+  <div class="summary-section">
+    <h3>指标摘要与共振评分</h3>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="resonance-bar" id="resonanceBar"></div>
+  </div>
+
+  <!-- 3. RSI -->
+  <div class="chart-card">
+    <div class="chart-card-hd">
+      <div class="dot" style="background:#1976D2;"></div>
+      <span class="title">RSI 指标</span>
+      <span class="info">超买70 / 超卖30</span>
+    </div>
+    <div class="chart-body"><div class="echart-small" id="chartRSI"></div></div>
+  </div>
+
+  <!-- 4. MACD -->
+  <div class="chart-card">
+    <div class="chart-card-hd">
+      <div class="dot" style="background:#F57C00;"></div>
+      <span class="title">MACD 指标</span>
+      <span class="info">DIF / DEA / MACD柱</span>
+    </div>
+    <div class="chart-body"><div class="echart-small" id="chartMACD"></div></div>
+  </div>
+
+  <!-- 5. KDJ 原理介绍 -->
+  <div class="info-section">
+    <div class="info-hd">
+      <div class="dot"></div>
+      <span class="title">KDJ 随机指标 — 原理与计算方法</span>
+    </div>
+    <div class="info-bd">
+      <h4>核心思想</h4>
+      <p>KDJ 衡量"当前收盘价在过去 N 日价格区间（最高价~最低价）中的相对位置"。RSV 值越接近 100，说明收盘价越接近近期高点，多头力量越强；越接近 0 则空头占优。</p>
+
+      <h4>计算步骤</h4>
+      <div class="formula">
+        ① RSV = (收盘价 − N日最低价) / (N日最高价 − N日最低价) × 100<br>
+        ② K[t] = (2/3) × K[t-1] + (1/3) × RSV[t] &nbsp;&nbsp;<span style="color:#888">（对 RSV 做 M 日平滑）</span><br>
+        ③ D[t] = (2/3) × D[t-1] + (1/3) × K[t] &nbsp;&nbsp;<span style="color:#888">（对 K 再做一次平滑）</span><br>
+        ④ J = 3K − 2D &nbsp;&nbsp;<span style="color:#888">（K、D 差值放大，灵敏度最高）</span><br>
+        <span style="color:#aaa">初始值 K = D = 50</span>
+      </div>
+      <p class="note">默认参数 N=9, M=3。K 线灵敏度适中，D 线更平滑，J 线最敏感（可突破 0~100 边界）。</p>
+
+      <h4>信号规则</h4>
+      <div class="signal">
+        <div class="signal-item"><span class="c-red">▲</span> K&gt;80 超买区（回调风险增加）</div>
+        <div class="signal-item"><span class="c-green">▼</span> K&lt;20 超卖区（反弹概率增大）</div>
+        <div class="signal-item"><span class="c-red">▲</span> K 上穿 D = 金叉（买入）</div>
+        <div class="signal-item"><span class="c-green">▼</span> K 下穿 D = 死叉（卖出）</div>
+        <div class="signal-item"><span class="c-red">▲</span> J&gt;100 极度超买（见顶信号）</div>
+        <div class="signal-item"><span class="c-green">▼</span> J&lt;0 极度超卖（见底信号）</div>
+      </div>
+      <p class="note" style="margin-top:8px;">KDJ 灵敏度高于 RSI 和 MACD，适合捕捉短期转折，但单独使用容易产生虚假信号，建议结合其他指标交叉验证。</p>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-card-hd">
+      <div class="dot" style="background:#7B1FA2;"></div>
+      <span class="title">KDJ 指标</span>
+      <span class="info">K线 / D线 / J线</span>
+    </div>
+    <div class="chart-body"><div class="echart-small" id="chartKDJ"></div></div>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/indicators.js"></script>
+<script>
+// ===== 全局状态 =====
+var RED = "#D32F2F", GREEN = "#388E3C";
+var state = {
+  currentStock: "tianqi_a",
+  zoomStart: 0,
+  zoomEnd: 100,
+  allDates: [],
+  charts: {},
+  sharedXData: []
+};
+
+// ===== 初始化股票标签 =====
+function initStockTabs() {
+  var container = document.getElementById("stockTabs");
+  var html = "";
+  var labels = {
+    tianqi_a: "天齐A", tianqi_hk: "天齐H",
+    ganfeng_a: "赣锋A", ganfeng_hk: "赣锋H", yanhu_a: "盐湖A"
+  };
+  Object.keys(STOCK_DATA).forEach(function (key) {
+    var cls = key === state.currentStock ? "stock-tab active" : "stock-tab";
+    html += '<button class="' + cls + '" onclick="switchStock(\'' + key + '\')">' + labels[key] + '</button>';
+  });
+  container.innerHTML = html;
+}
+
+function switchStock(key) {
+  state.currentStock = key;
+  state.zoomStart = 0; state.zoomEnd = 100;
+  initStockTabs();
+  loadData();
+}
+
+// ===== 加载数据 =====
+function loadData() {
+  var stock = STOCK_DATA[state.currentStock];
+  document.getElementById("klineTitle").textContent = stock.name + " " + stock.code + " · K线走势 + 布林带";
+  recalculate();
+}
+
+// ===== 获取参数 =====
+function getParams() {
+  return {
+    rsiPeriod: parseInt(document.getElementById("rsiPeriod").value) || 14,
+    macdFast: parseInt(document.getElementById("macdFast").value) || 12,
+    macdSlow: parseInt(document.getElementById("macdSlow").value) || 26,
+    macdSignal: parseInt(document.getElementById("macdSignal").value) || 9,
+    bollPeriod: parseInt(document.getElementById("bollPeriod").value) || 20,
+    bollNbdev: parseFloat(document.getElementById("bollNbdev").value) || 2,
+    kdjPeriod: parseInt(document.getElementById("kdjPeriod").value) || 9,
+    kdjSmooth: parseInt(document.getElementById("kdjSmooth").value) || 3,
+  };
+}
+
+// ===== 重算 =====
+function recalculate() {
+  var stock = STOCK_DATA[state.currentStock];
+  var records = stock.records;
+
+  var dates = records.map(function (r) { return r.trade_date; });
+  var opens = records.map(function (r) { return r.open; });
+  var closes = records.map(function (r) { return r.close; });
+  var highs = records.map(function (r) { return r.high; });
+  var lows = records.map(function (r) { return r.low; });
+  var vols = records.map(function (r) { return r.vol; });
+
+  state.sharedXData = dates.map(function (d) { return d.substring(4, 6) + "/" + d.substring(6, 8); });
+
+  var p = getParams();
+
+  var rsi = calcRSI(closes, p.rsiPeriod);
+  var macd = calcMACD(closes, p.macdFast, p.macdSlow, p.macdSignal);
+  var boll = calcBOLL(closes, p.bollPeriod, p.bollNbdev);
+  var kdj = calcKDJ(highs, lows, closes, p.kdjPeriod, p.kdjSmooth);
+
+  // 渲染全部图表（全量数据，用 dataZoom 控制可见范围）
+  renderKline(dates, opens, closes, highs, lows, vols, boll);
+  renderRSI(rsi, p.rsiPeriod);
+  renderMACD(macd);
+  renderKDJ(kdj);
+
+  // 信号（基于 dataZoom 可见范围内的数据）
+  updateSignals(rsi, macd, boll, kdj, closes);
+}
+
+// ===== dataZoom 联动 =====
+function onZoomChange(start, end) {
+  state.zoomStart = start; state.zoomEnd = end;
+  // 同步所有副图的 dataZoom
+  ["chartRSI", "chartMACD", "chartKDJ"].forEach(function (id) {
+    var c = state.charts[id];
+    if (c) c.dispatchAction({ type: "dataZoom", start: start, end: end });
+  });
+  // 更新信号
+  var stock = STOCK_DATA[state.currentStock];
+  var records = stock.records;
+  var closes = records.map(function (r) { return r.close; });
+  var highs = records.map(function (r) { return r.high; });
+  var lows = records.map(function (r) { return r.low; });
+  var p = getParams();
+  var rsi = calcRSI(closes, p.rsiPeriod);
+  var macd = calcMACD(closes, p.macdFast, p.macdSlow, p.macdSignal);
+  var boll = calcBOLL(closes, p.bollPeriod, p.bollNbdev);
+  var kdj = calcKDJ(highs, lows, closes, p.kdjPeriod, p.kdjSmooth);
+  updateSignals(rsi, macd, boll, kdj, closes);
+}
+
+// ===== 基于可见范围计算信号 =====
+function updateSignals(rsi, macd, boll, kdj, closes) {
+  var total = closes.length;
+  var visStart = Math.floor(state.zoomStart / 100 * total);
+  var visEnd = Math.min(total - 1, Math.ceil(state.zoomEnd / 100 * total));
+
+  function lastVisibleVal(arr) {
+    for (var i = visEnd; i >= visStart; i--) { if (arr[i] !== null) return arr[i]; }
+    return null;
+  }
+
+  var signals = { rsi: "neutral", macd: "neutral", boll: "neutral", kdj: "neutral" };
+  var summary = { buy: 0, sell: 0, neutral: 0, verdict: "中性" };
+
+  var rsiVal = lastVisibleVal(rsi);
+  if (rsiVal !== null) {
+    if (rsiVal < 30) signals.rsi = "buy";
+    else if (rsiVal > 70) signals.rsi = "sell";
+  }
+
+  if (macd.dif[visEnd] !== null && macd.dea[visEnd] !== null) {
+    signals.macd = macd.dif[visEnd] > macd.dea[visEnd] ? "buy" : "sell";
+  }
+
+  if (boll.up[visEnd] !== null && closes[visEnd] !== null) {
+    if (closes[visEnd] <= boll.dn[visEnd] * 1.01) signals.boll = "buy";
+    else if (closes[visEnd] >= boll.up[visEnd] * 0.99) signals.boll = "sell";
+  }
+
+  if (kdj.k[visEnd] !== null && kdj.d[visEnd] !== null) {
+    signals.kdj = kdj.k[visEnd] > kdj.d[visEnd] ? "buy" : "sell";
+  }
+
+  ["rsi", "macd", "boll", "kdj"].forEach(function (key) {
+    if (signals[key] === "buy") summary.buy++;
+    else if (signals[key] === "sell") summary.sell++;
+    else summary.neutral++;
+  });
+
+  if (summary.buy >= 3) summary.verdict = "强买入";
+  else if (summary.buy === 2) summary.verdict = "偏多";
+  else if (summary.sell >= 3) summary.verdict = "强卖出";
+  else if (summary.sell === 2) summary.verdict = "偏空";
+  else summary.verdict = "中性震荡";
+
+  renderSummary(rsiVal, signals, summary, kdj, visEnd, lastVisibleVal);
+}
+
+// ===== ECharts 辅助 =====
+function getChart(id) {
+  if (!state.charts[id]) state.charts[id] = echarts.init(document.getElementById(id));
+  return state.charts[id];
+}
+
+// ===== 主图：K线 + 布林带 + 成交量 + dataZoom =====
+function renderKline(dates, opens, closes, highs, lows, vols, boll) {
+  var chart = getChart("chartKline");
+  var xData = state.sharedXData;
+  var ohlc = dates.map(function (_, i) {
+    return [opens[i], closes[i], lows[i], highs[i]];
+  });
+  function calcMA(data, period) {
+    var ma = [];
+    for (var i = 0; i < data.length; i++) {
+      if (i < period - 1) { ma.push(null); continue; }
+      var s = 0;
+      for (var j = i - period + 1; j <= i; j++) s += data[j];
+      ma.push(s / period);
+    }
+    return ma;
+  }
+  var ma5 = calcMA(closes, 5);
+  var ma20 = calcMA(closes, 20);
+
+  chart.setOption({
+    animation: false,
+    tooltip: { trigger: "axis", axisPointer: { type: "cross" } },
+    legend: { data: ["K线", "MA5", "MA20", "布林上轨", "布林中轨", "布林下轨"], top: 5, textStyle: { fontSize: 11 } },
+    grid: [
+      { left: 60, right: 20, top: 40, height: "58%" },
+      { left: 60, right: 20, top: "72%", height: "14%" }
+    ],
+    xAxis: [
+      { type: "category", data: xData, axisLabel: { fontSize: 10 }, gridIndex: 0 },
+      { type: "category", data: xData, gridIndex: 1, show: false }
+    ],
+    yAxis: [
+      { scale: true, gridIndex: 0, splitLine: { lineStyle: { color: "#f0f0f0" } } },
+      { gridIndex: 1, splitNumber: 2 }
+    ],
+    dataZoom: [
+      { type: "slider", xAxisIndex: [0, 1], start: state.zoomStart, end: state.zoomEnd,
+        bottom: 5, height: 20, borderColor: "#ccc", fillerColor: "rgba(55,138,221,0.15)",
+        handleStyle: { color: "#185FA5" } },
+      { type: "inside", xAxisIndex: [0, 1], start: state.zoomStart, end: state.zoomEnd }
+    ],
+    series: [
+      { name: "K线", type: "candlestick", data: ohlc,
+        itemStyle: { color: RED, color0: GREEN, borderColor: RED, borderColor0: GREEN } },
+      { name: "MA5", type: "line", data: ma5, smooth: true, lineStyle: { width: 1 }, symbol: "none", color: "#EF9F27" },
+      { name: "MA20", type: "line", data: ma20, smooth: true, lineStyle: { width: 1 }, symbol: "none", color: "#7B1FA2" },
+      { name: "布林上轨", type: "line", data: boll.up, symbol: "none", color: RED,
+        lineStyle: { width: 1, type: "dashed", opacity: 0.5 } },
+      { name: "布林中轨", type: "line", data: boll.mid, symbol: "none", color: "#1976D2",
+        lineStyle: { width: 1, opacity: 0.5 } },
+      { name: "布林下轨", type: "line", data: boll.dn, symbol: "none", color: GREEN,
+        lineStyle: { width: 1, type: "dashed", opacity: 0.5 } },
+      { name: "成交量", type: "bar", xAxisIndex: 1, yAxisIndex: 1,
+        data: vols.map(function (v, i) {
+          return { value: v, itemStyle: { color: closes[i] >= opens[i] ? RED : GREEN, opacity: 0.5 } };
+        }) }
+    ]
+  }, true);
+
+  chart.off("dataZoom");
+  chart.on("dataZoom", function (params) {
+    var opt = chart.getOption();
+    var dz = opt.dataZoom[0];
+    onZoomChange(dz.start, dz.end);
+  });
+}
+
+// ===== RSI =====
+function renderRSI(rsi, period) {
+  var chart = getChart("chartRSI");
+  chart.setOption({
+    animation: false,
+    tooltip: { trigger: "axis" },
+    grid: { left: 50, right: 20, top: 20, bottom: 50 },
+    xAxis: { type: "category", data: state.sharedXData, axisLabel: { fontSize: 10 } },
+    yAxis: { min: 0, max: 100, splitLine: { lineStyle: { color: "#f0f0f0" } } },
+    dataZoom: [
+      { type: "slider", start: state.zoomStart, end: state.zoomEnd, bottom: 5, height: 18,
+        borderColor: "#ccc", fillerColor: "rgba(55,138,221,0.1)" },
+      { type: "inside", start: state.zoomStart, end: state.zoomEnd }
+    ],
+    series: [
+      { type: "line", data: rsi, name: "RSI(" + period + ")", symbol: "none",
+        color: "#1976D2", lineStyle: { width: 1.5, color: "#1976D2" },
+        markLine: { symbol: "none", data: [
+          { yAxis: 70, lineStyle: { color: RED, type: "dashed", width: 0.8 }, label: { formatter: "70 超买" } },
+          { yAxis: 30, lineStyle: { color: GREEN, type: "dashed", width: 0.8 }, label: { formatter: "30 超卖" } }
+        ]} }
+    ]
+  }, true);
+  chart.off("dataZoom");
+  chart.on("dataZoom", function () {
+    var dz = chart.getOption().dataZoom[0];
+    syncZoomFrom("chartRSI", dz.start, dz.end);
+  });
+}
+
+// ===== MACD =====
+function renderMACD(macd) {
+  var chart = getChart("chartMACD");
+  chart.setOption({
+    animation: false,
+    tooltip: { trigger: "axis" },
+    legend: { data: ["DIF", "DEA", "MACD柱"], top: 5 },
+    grid: { left: 50, right: 20, top: 40, bottom: 50 },
+    xAxis: { type: "category", data: state.sharedXData, axisLabel: { fontSize: 10 } },
+    yAxis: { type: "value", splitLine: { lineStyle: { color: "#f0f0f0" } } },
+    dataZoom: [
+      { type: "slider", start: state.zoomStart, end: state.zoomEnd, bottom: 5, height: 18,
+        borderColor: "#ccc", fillerColor: "rgba(55,138,221,0.1)" },
+      { type: "inside", start: state.zoomStart, end: state.zoomEnd }
+    ],
+    series: [
+      { name: "DIF", type: "line", data: macd.dif, symbol: "none", color: "#F57C00",
+        lineStyle: { width: 1.3, color: "#F57C00" } },
+      { name: "DEA", type: "line", data: macd.dea, symbol: "none", color: "#1976D2",
+        lineStyle: { width: 1.3, color: "#1976D2" } },
+      { name: "MACD柱", type: "bar", data: macd.macd.map(function (v) {
+        return v !== null ? { value: v, itemStyle: { color: v >= 0 ? RED : GREEN, opacity: 0.6 } } : null;
+      }) }
+    ]
+  }, true);
+  chart.off("dataZoom");
+  chart.on("dataZoom", function () {
+    var dz = chart.getOption().dataZoom[0];
+    syncZoomFrom("chartMACD", dz.start, dz.end);
+  });
+}
+
+// ===== KDJ =====
+function renderKDJ(kdj) {
+  var chart = getChart("chartKDJ");
+  chart.setOption({
+    animation: false,
+    tooltip: { trigger: "axis" },
+    legend: { data: ["K", "D", "J"], top: 5 },
+    grid: { left: 50, right: 20, top: 40, bottom: 50 },
+    xAxis: { type: "category", data: state.sharedXData, axisLabel: { fontSize: 10 } },
+    yAxis: { splitLine: { lineStyle: { color: "#f0f0f0" } } },
+    dataZoom: [
+      { type: "slider", start: state.zoomStart, end: state.zoomEnd, bottom: 5, height: 18,
+        borderColor: "#ccc", fillerColor: "rgba(55,138,221,0.1)" },
+      { type: "inside", start: state.zoomStart, end: state.zoomEnd }
+    ],
+    series: [
+      { name: "K", type: "line", data: kdj.k, symbol: "none", color: "#1565C0",
+        lineStyle: { width: 1.3, color: "#1565C0" } },
+      { name: "D", type: "line", data: kdj.d, symbol: "none", color: "#E65100",
+        lineStyle: { width: 1.3, color: "#E65100" } },
+      { name: "J", type: "line", data: kdj.j, symbol: "none", color: "#7B1FA2",
+        lineStyle: { width: 1, color: "#7B1FA2", opacity: 0.8 } }
+    ]
+  }, true);
+  chart.off("dataZoom");
+  chart.on("dataZoom", function () {
+    var dz = chart.getOption().dataZoom[0];
+    syncZoomFrom("chartKDJ", dz.start, dz.end);
+  });
+}
+
+// ===== dataZoom 联动同步 =====
+var syncTimer = null;
+function syncZoomFrom(sourceId, start, end) {
+  state.zoomStart = start; state.zoomEnd = end;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(function () {
+    ["chartKline", "chartRSI", "chartMACD", "chartKDJ"].forEach(function (id) {
+      if (id === sourceId) return;
+      var c = state.charts[id];
+      if (c) {
+        c.setOption({ dataZoom: [{ start: start, end: end }, { start: start, end: end }] });
+      }
+    });
+    // 更新信号
+    var stock = STOCK_DATA[state.currentStock];
+    var records = stock.records;
+    var closes = records.map(function (r) { return r.close; });
+    var highs = records.map(function (r) { return r.high; });
+    var lows = records.map(function (r) { return r.low; });
+    var p = getParams();
+    var rsi = calcRSI(closes, p.rsiPeriod);
+    var macd = calcMACD(closes, p.macdFast, p.macdSlow, p.macdSignal);
+    var boll = calcBOLL(closes, p.bollPeriod, p.bollNbdev);
+    var kdj = calcKDJ(highs, lows, closes, p.kdjPeriod, p.kdjSmooth);
+    updateSignals(rsi, macd, boll, kdj, closes);
+  }, 100);
+}
+
+// ===== 摘要 =====
+function renderSummary(rsiVal, signals, summary, kdj, visEnd, lastVisibleVal) {
+  var sigText = { buy: "买入", sell: "卖出", neutral: "中性" };
+  var sigColor = { buy: "c-green", sell: "c-red", neutral: "c-amber" };
+
+  var macdText = signals.macd === "buy" ? "金叉" : (signals.macd === "sell" ? "死叉" : "中性");
+  var kdjJ = lastVisibleVal(kdj.j);
+  var kdjK = lastVisibleVal(kdj.k);
+
+  var cards = [
+    { name: "RSI", value: rsiVal ? rsiVal.toFixed(2) : "—", status: sigText[signals.rsi], color: sigColor[signals.rsi] },
+    { name: "MACD", value: macdText, status: signals.macd === "buy" ? "DIF>DEA" : "DIF<DEA", color: sigColor[signals.macd] },
+    { name: "布林带", value: sigText[signals.boll], status: "位置判定", color: sigColor[signals.boll] },
+    { name: "KDJ", value: kdjJ !== null ? "J=" + kdjJ.toFixed(1) : "—", status: kdjK !== null ? "K=" + kdjK.toFixed(1) : "—", color: sigColor[signals.kdj] }
+  ];
+
+  var html = "";
+  cards.forEach(function (c) {
+    html += '<div class="summary-card"><div class="name">' + c.name + '</div>' +
+      '<div class="value ' + c.color + '">' + c.value + '</div>' +
+      '<div class="status">' + c.status + '</div></div>';
+  });
+  document.getElementById("summaryGrid").innerHTML = html;
+
+  var s = summary;
+  var verdictColor = s.verdict.indexOf("买入") >= 0 ? "c-green" : (s.verdict.indexOf("卖出") >= 0 ? "c-red" : "c-amber");
+  var rHtml = "";
+  rHtml += '<div class="resonance-item bg-green"><div class="tag">买入信号</div><div class="score c-green">' + s.buy + '<span class="total">/4</span></div></div>';
+  rHtml += '<div class="resonance-item bg-amber"><div class="tag">中性</div><div class="score c-amber">' + s.neutral + '<span class="total">/4</span></div></div>';
+  rHtml += '<div class="resonance-item bg-red"><div class="tag">卖出信号</div><div class="score c-red">' + s.sell + '<span class="total">/4</span></div></div>';
+  rHtml += '<div class="verdict-box"><div class="tag">综合研判</div><div class="text ' + verdictColor + '">' + s.verdict + '</div></div>';
+  document.getElementById("resonanceBar").innerHTML = rHtml;
+}
+
+// ===== 启动 =====
+window.addEventListener("load", function () {
+  initStockTabs();
+  loadData();
+});
+window.addEventListener("resize", function () {
+  Object.keys(state.charts).forEach(function (k) { state.charts[k].resize(); });
+});
+</script>
+</body>
+</html>
