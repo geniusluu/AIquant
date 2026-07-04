@@ -1,0 +1,302 @@
+{
+  "spec_version": "2.0.0",
+  "spec_name": "lithium_stocks_daily_ohlcv_v2",
+  "created_at": "2026-07-04",
+  "updated_at": "2026-07-04",
+  "maintainer": "BA工作坊·量化交易策略",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-07-04",
+      "changes": "TASK1-2 初始版本，定义三股 OHLCV 日线取数基本规范"
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-07-04",
+      "changes": "新增复权处理策略（raw/qfq/hfq）、除权除息事件日志、交易日历校验、增量更新模式、数据血缘元数据、按接口细化的频率限制"
+    }
+  ],
+
+  "description": "锂业三股（天齐锂业、赣锋锂业、盐湖股份）日线 OHLCV 行情数据取数规范 v2.0。定义标的清单、数据源、字段 schema、复权策略、时间范围、存储路径、质量校验与数据血缘，供取数脚本消费。",
+
+  "instruments": [
+    {
+      "id": "tianqi_a",
+      "name_cn": "天齐锂业",
+      "name_en": "Tianqi Lithium",
+      "ts_code": "002466.SZ",
+      "market": "A",
+      "exchange": "SZSE",
+      "currency": "CNY",
+      "industry": "有色金属-锂",
+      "list_date": "2010-08-31",
+      "has_hk": true,
+      "priority": 1,
+      "status": "active"
+    },
+    {
+      "id": "tianqi_hk",
+      "name_cn": "天齐锂业(港)",
+      "name_en": "Tianqi Lithium HK",
+      "ts_code": "09696.HK",
+      "market": "HK",
+      "exchange": "HKEX",
+      "currency": "HKD",
+      "industry": "有色金属-锂",
+      "list_date": "2023-06-13",
+      "has_hk": true,
+      "priority": 1,
+      "status": "active"
+    },
+    {
+      "id": "ganfeng_a",
+      "name_cn": "赣锋锂业",
+      "name_en": "Ganfeng Lithium",
+      "ts_code": "002460.SZ",
+      "market": "A",
+      "exchange": "SZSE",
+      "currency": "CNY",
+      "industry": "有色金属-锂",
+      "list_date": "2010-08-10",
+      "has_hk": true,
+      "priority": 2,
+      "status": "active"
+    },
+    {
+      "id": "ganfeng_hk",
+      "name_cn": "赣锋锂业(港)",
+      "name_en": "Ganfeng Lithium HK",
+      "ts_code": "01772.HK",
+      "market": "HK",
+      "exchange": "HKEX",
+      "currency": "HKD",
+      "industry": "有色金属-锂",
+      "list_date": "2018-10-10",
+      "has_hk": true,
+      "priority": 2,
+      "status": "active"
+    },
+    {
+      "id": "yanhu_a",
+      "name_cn": "盐湖股份",
+      "name_en": "Qinghai Salt Lake",
+      "ts_code": "000792.SZ",
+      "market": "A",
+      "exchange": "SZSE",
+      "currency": "CNY",
+      "industry": "化学原料-钾肥/盐湖提锂",
+      "list_date": "1997-07-07",
+      "has_hk": false,
+      "priority": 3,
+      "status": "active",
+      "notes": "2019-2020年连续亏损曾*ST，2021年重整恢复；取数需关注数据连续性"
+    }
+  ],
+
+  "data_source": {
+    "primary": {
+      "name": "Tushare Pro",
+      "endpoint": "https://api.tushare.pro",
+      "auth": {
+        "method": "token",
+        "config_source": "mcp_config",
+        "mcp_path": "~/.workbuddy/mcp.json",
+        "mcp_key": "mcpServers.tushareMcp.url",
+        "mcp_token_extract": "截取 url 中 token= 之后的值",
+        "fallback_env": "TUSHARE_TOKEN",
+        "note": "优先从 MCP 配置读取 token（避免环境变量未设置）；fallback 到环境变量"
+      },
+      "interface_map": {
+        "A": {
+          "daily": "daily",
+          "adj_factor": "adj_factor",
+          "dividend": "dividend"
+        },
+        "HK": {
+          "daily": "hk_daily",
+          "adj_factor": "hk_adjfactor"
+        }
+      },
+      "rate_limits": {
+        "daily": { "interval_ms": 200, "note": "A股日线行情，限制较宽" },
+        "adj_factor": { "interval_seconds": 65, "note": "A股复权因子，严格限制 1次/分钟，必须间隔≥65秒" },
+        "hk_daily": { "interval_ms": 1000, "note": "港股日线行情" },
+        "hk_adjfactor": { "interval_seconds": 1, "note": "港股复权因子，限制较宽" },
+        "dividend": { "interval_seconds": 30, "note": "除权除息事件，建议间隔30秒" }
+      }
+    },
+    "fallback": {
+      "name": "东方财富",
+      "endpoint": "push2his.eastmoney.com",
+      "interface_map": {
+        "A": "f41",
+        "HK": "f26"
+      },
+      "trigger": "Tushare 连续失败 3 次或返回非零 code",
+      "note": "字段命名与 Tushare 不同，需字段映射；无复权因子，仅提供 raw 行情"
+    }
+  },
+
+  "fields": {
+    "request_fields": "ts_code,trade_date,open,high,low,close,vol,amount,pre_close,change,pct_chg",
+    "schema": [
+      { "name": "ts_code", "type": "string", "description": "股票代码", "example": "002466.SZ" },
+      { "name": "trade_date", "type": "string", "format": "YYYYMMDD", "description": "交易日期", "example": "20250704" },
+      { "name": "open", "type": "float", "unit": "元/港元", "description": "开盘价" },
+      { "name": "high", "type": "float", "unit": "元/港元", "description": "最高价" },
+      { "name": "low", "type": "float", "unit": "元/港元", "description": "最低价" },
+      { "name": "close", "type": "float", "unit": "元/港元", "description": "收盘价" },
+      { "name": "vol", "type": "float", "unit": "手", "description": "成交量（1手=100股）" },
+      { "name": "amount", "type": "float", "unit": "千元/千港元", "description": "成交额" },
+      { "name": "pre_close", "type": "float", "unit": "元/港元", "description": "前收盘价" },
+      { "name": "change", "type": "float", "unit": "元/港元", "description": "涨跌额（close - pre_close）" },
+      { "name": "pct_chg", "type": "float", "unit": "%", "precision": 4, "description": "涨跌幅", "example": -2.8803 }
+    ],
+    "required": ["trade_date", "open", "high", "low", "close", "vol", "pct_chg"]
+  },
+
+  "adjustment": {
+    "strategies": ["raw", "qfq", "hfq"],
+    "default_for_analysis": "qfq",
+    "description": {
+      "raw": "不复权，保留交易所原始挂牌价，用于核对",
+      "qfq": "前复权，以最新交易日为基准向前调整，适合技术分析与横向比较",
+      "hfq": "后复权，以最早交易日为基准向后调整，适合长期收益率计算"
+    },
+    "storage_policy": {
+      "always_store": ["raw", "qfq"],
+      "optional": ["hfq"],
+      "note": "默认同时存储 raw 和 qfq 两套数据；横向比较、技术指标计算统一使用 qfq"
+    },
+    "calc_method": {
+      "qfq": "price_qfq = price_raw * (adj_factor / latest_adj_factor)",
+      "hfq": "price_hfq = price_raw * adj_factor",
+      "applies_to": ["open", "high", "low", "close", "pre_close"]
+    },
+    "vol_amount_note": "成交量和成交额不做复权处理（保持原始值）"
+  },
+
+  "corporate_actions": {
+    "enabled": true,
+    "api": "dividend",
+    "scope": "A股标的（港股分红事件暂不纳入）",
+    "output_file": "除权除息事件日志.json",
+    "fields": ["ts_code", "end_date", "ann_date", "div_proc", "stk_div", "cash_div", "div_listdate", "ex_date"],
+    "note": "记录近一年内的分红/送股/转增事件，用于解释复权因子跳变和涨跌异常"
+  },
+
+  "time_range": {
+    "mode": "rolling",
+    "window_days": 365,
+    "start_date": null,
+    "end_date": null,
+    "update_mode": {
+      "full": "全量重取（默认，适合首次或数据校准）",
+      "incremental": "增量更新，仅取上次截止日之后的新数据（需提供 last_date 参数）"
+    },
+    "note": "mode=rolling 自动取近365天；mode=fixed 指定 start_date/end_date；update_mode 控制增量/全量"
+  },
+
+  "frequency": {
+    "default": "daily",
+    "options": ["daily", "weekly", "monthly"],
+    "note": "当前落地日线；周线/月线可后续用 Tushare weekly/monthly 接口扩展"
+  },
+
+  "storage": {
+    "root_dir": "TASK02/raw_data",
+    "format": ["json", "csv"],
+    "naming_rule": "{instrument_id}_data_{adjust}.{ext}",
+    "examples": [
+      "tianqi_a_data_raw.json",
+      "tianqi_a_data_qfq.csv",
+      "ganfeng_hk_data_raw.json",
+      "yanhu_a_data_qfq.csv"
+    ],
+    "adj_factor_file": "{instrument_id}_adj.json",
+    "csv_encoding": "utf-8-sig",
+    "json_encoding": "utf-8",
+    "json_ensure_ascii": false,
+    "sort_order": "trade_date ASC",
+    "nan_handling": "convert_to_null_in_json"
+  },
+
+  "quality_check": {
+    "row_count": {
+      "A": { "min": 230, "max": 252, "note": "A股一年约244个交易日" },
+      "HK": { "min": 235, "max": 252, "note": "港股一年约247个交易日" }
+    },
+    "null_check": {
+      "fields": ["open", "high", "low", "close", "vol"],
+      "rule": "不允许缺失，缺失则记录告警"
+    },
+    "anomaly_check": {
+      "field": "pct_chg",
+      "threshold_pct": 20,
+      "action": "标记并人工复核；若当日有除权除息事件，则归因为公司行动而非异常波动",
+      "cross_ref": "corporate_actions"
+    },
+    "gap_check": {
+      "enabled": true,
+      "rule": "按交易日历检查断档，停牌日期单独记录",
+      "reference_calendar": {
+        "api": "trade_cal",
+        "params": "exchange=SSE（A股）/ 港股用 HKEX 日历",
+        "note": "Tushare trade_cal 默认提供 SSE 日历，覆盖 A股；港股日历需单独处理"
+      }
+    },
+    "adj_consistency": {
+      "rule": "验证 qfq 数据中，除权日前后的价格比例与复权因子跳变一致",
+      "tolerance": 0.001
+    }
+  },
+
+  "execution": {
+    "rate_limit_auto": true,
+    "retry": { "max_attempts": 3, "backoff_seconds": 2, "strategy": "exponential" },
+    "timeout_seconds": 30,
+    "fallback_trigger": "连续失败 3 次",
+    "auto_backup": true,
+    "backup_dir": "TASK02/raw_data/"
+  },
+
+  "data_lineage": {
+    "enabled": true,
+    "output_file": "数据血缘报告.json",
+    "fields": [
+      "fetch_timestamp_utc8",
+      "spec_version",
+      "data_source",
+      "instruments_summary",
+      "quality_check_results",
+      "adj_changes_count",
+      "corporate_actions_count",
+      "errors"
+    ],
+    "note": "每次取数完成后自动生成血缘报告，记录数据来源、时间戳、校验结果，用于审计与追溯"
+  },
+
+  "output_alignment": {
+    "enabled": true,
+    "description": "以三只 A股交易日交集为基准，对齐前复权收盘价与涨跌幅",
+    "adjust_basis": "qfq",
+    "output_file": "三股对齐数据.csv",
+    "columns": ["trade_date", "tianqi_close", "ganfeng_close", "yanhu_close", "tianqi_pct", "ganfeng_pct", "yanhu_pct"]
+  },
+
+  "extension_guide": {
+    "add_instrument": "在 instruments 数组追加一项，脚本按 ts_code 后缀自动路由接口",
+    "add_market": "在 interface_map 中新增市场映射，并在 rate_limits 配置对应频率限制",
+    "add_field": "在 fields.schema 追加字段定义，同步更新 request_fields",
+    "example_new_stock": {
+      "id": "your_id",
+      "name_cn": "股票简称",
+      "ts_code": "XXXXXX.SZ",
+      "market": "A",
+      "exchange": "SZSE",
+      "currency": "CNY",
+      "has_hk": false,
+      "status": "active"
+    }
+  }
+}
